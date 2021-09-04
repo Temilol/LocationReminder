@@ -158,8 +158,10 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
                     .snippet(snippet)
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
             )
+            _viewModel.selectedPOI.postValue(null)
             _viewModel.latitude.postValue(latLng.latitude)
             _viewModel.longitude.postValue(latLng.longitude)
+            _viewModel.reminderSelectedLocationStr.postValue(getString(R.string.dropped_pin))
             binding.selectButton.visibility = View.VISIBLE
         }
     }
@@ -168,6 +170,8 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         googleMap.setOnPoiClickListener { poi ->
             map.clear()
             _viewModel.selectedPOI.postValue(poi)
+            _viewModel.latitude.postValue(poi.latLng.latitude)
+            _viewModel.longitude.postValue(poi.latLng.longitude)
             _viewModel.reminderSelectedLocationStr.postValue(poi?.name)
             val poiMarker = map.addMarker(
                 MarkerOptions()
