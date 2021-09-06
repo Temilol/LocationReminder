@@ -9,6 +9,7 @@ import com.udacity.project4.locationreminders.data.FakeDataSource
 import com.udacity.project4.locationreminders.data.dto.ReminderDTO
 import getOrAwaitValue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.`is`
 import org.hamcrest.MatcherAssert.assertThat
 import org.junit.Before
@@ -50,7 +51,19 @@ class RemindersListViewModelTest {
         assertThat(remindersListViewModel.showLoading.getOrAwaitValue(), `is`(true))
         mainCoroutineRule.resumeDispatcher()
         assertThat(remindersListViewModel.showLoading.getOrAwaitValue(), `is`(false))
+        assertThat(remindersListViewModel.showNoData.getOrAwaitValue(), `is`(false))
         assertThat(remindersListViewModel.remindersList.getOrAwaitValue().size, `is`(3))
+    }
+
+    @Test
+    fun loadReminders_empty_data_loading() = runBlocking {
+        fakeDataSource.deleteAllReminders()
+        mainCoroutineRule.pauseDispatcher()
+        remindersListViewModel.loadReminders()
+        assertThat(remindersListViewModel.showLoading.getOrAwaitValue(), `is`(true))
+        mainCoroutineRule.resumeDispatcher()
+        assertThat(remindersListViewModel.showLoading.getOrAwaitValue(), `is`(false))
+        assertThat(remindersListViewModel.showNoData.getOrAwaitValue(), `is`(true))
     }
 
     @Test
@@ -62,5 +75,6 @@ class RemindersListViewModelTest {
         mainCoroutineRule.resumeDispatcher()
         assertThat(remindersListViewModel.showLoading.getOrAwaitValue(), `is`(false))
         assertThat(remindersListViewModel.showNoData.getOrAwaitValue(), `is`(true))
+        assertThat(remindersListViewModel.showSnackBar.getOrAwaitValue() == "Reminders exception", `is`(true))
     }
 }

@@ -9,6 +9,7 @@ import androidx.navigation.Navigation
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import androidx.test.espresso.Espresso.onView
 import androidx.test.espresso.IdlingRegistry
+import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions
 import androidx.test.espresso.matcher.ViewMatchers.*
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -20,8 +21,8 @@ import com.udacity.project4.locationreminders.data.local.LocalDB
 import com.udacity.project4.locationreminders.data.local.RemindersLocalRepository
 import com.udacity.project4.locationreminders.savereminder.SaveReminderViewModel
 import com.udacity.project4.util.DataBindingIdlingResource
-import com.udacity.project4.util.EspressoIdlingResource
 import com.udacity.project4.util.monitorFragment
+import com.udacity.project4.utils.EspressoIdlingResource
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -36,6 +37,7 @@ import org.koin.dsl.module
 import org.koin.test.AutoCloseKoinTest
 import org.koin.test.get
 import org.mockito.Mockito
+import org.mockito.Mockito.verify
 
 @RunWith(AndroidJUnit4::class)
 @ExperimentalCoroutinesApi
@@ -122,6 +124,19 @@ class ReminderListFragmentTest : AutoCloseKoinTest() {
             Navigation.setViewNavController(it.view!!, navController)
         }
         onView(withId(R.id.noDataTextView)).check(ViewAssertions.matches(isDisplayed()))
+    }
+
+    @Test
+    fun `validate_navigate_to_save_fragment`() {
+        val scenario = launchFragmentInContainer<ReminderListFragment>(Bundle(), R.style.AppTheme)
+        dataBindingIdlingResource.monitorFragment(scenario)
+
+        val navController = Mockito.mock(NavController::class.java)
+        scenario.onFragment {
+            Navigation.setViewNavController(it.view!!, navController)
+        }
+        onView(withId(R.id.addReminderFAB)).perform(click())
+        verify(navController).navigate(ReminderListFragmentDirections.toSaveReminder())
     }
 
     companion object {

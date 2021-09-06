@@ -1,6 +1,7 @@
 package com.udacity.project4.locationreminders.savereminder
 
 import android.app.Application
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.google.android.gms.maps.model.PointOfInterest
@@ -14,23 +15,39 @@ import kotlinx.coroutines.launch
 
 class SaveReminderViewModel(val app: Application, val dataSource: ReminderDataSource) :
     BaseViewModel(app) {
-    val reminderTitle = MutableLiveData<String>()
-    val reminderDescription = MutableLiveData<String>()
-    val reminderSelectedLocationStr = MutableLiveData<String>()
-    val selectedPOI = MutableLiveData<PointOfInterest>()
-    val latitude = MutableLiveData<Double>()
-    val longitude = MutableLiveData<Double>()
+    val _reminderTitle = MutableLiveData<String>()
+    val reminderTitle: LiveData<String>
+            get() = _reminderTitle
+
+    val _reminderDescription = MutableLiveData<String>()
+    val reminderDescription: LiveData<String>
+            get() = _reminderDescription
+
+    val _reminderSelectedLocationStr = MutableLiveData<String>()
+    val reminderSelectedLocationStr: LiveData<String>
+        get() = _reminderSelectedLocationStr
+
+    private val _selectedPOI = MutableLiveData<PointOfInterest>()
+    val selectedPOI: LiveData<PointOfInterest> = _selectedPOI
+
+    private val _latitude = MutableLiveData<Double>()
+    val latitude: LiveData<Double>
+            get() = _latitude
+
+    val _longitude = MutableLiveData<Double>()
+    val longitude: LiveData<Double>
+            get() = _longitude
 
     /**
      * Clear the live data objects to start fresh next time the view model gets called
      */
     fun onClear() {
-        reminderTitle.value = null
-        reminderDescription.value = null
-        reminderSelectedLocationStr.value = null
-        selectedPOI.value = null
-        latitude.value = null
-        longitude.value = null
+        _reminderTitle.value = null
+        _reminderDescription.value = null
+        _reminderSelectedLocationStr.value = null
+        _selectedPOI.value = null
+        _latitude.value = null
+        _longitude.value = null
     }
 
     /**
@@ -83,5 +100,12 @@ class SaveReminderViewModel(val app: Application, val dataSource: ReminderDataSo
             return false
         }
         return true
+    }
+
+    fun setMapValues(poi: PointOfInterest? = null, lat: Double, long: Double, name: String?) {
+        _selectedPOI.postValue(poi)
+        _latitude.postValue(lat)
+        _longitude.postValue(long)
+        _reminderSelectedLocationStr.postValue(name)
     }
 }

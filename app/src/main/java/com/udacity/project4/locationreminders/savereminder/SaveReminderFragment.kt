@@ -3,6 +3,7 @@ package com.udacity.project4.locationreminders.savereminder
 import android.Manifest
 import android.annotation.SuppressLint
 import android.annotation.TargetApi
+import android.app.AlertDialog
 import android.app.PendingIntent
 import android.content.Intent
 import android.content.IntentSender
@@ -27,12 +28,11 @@ import com.udacity.project4.databinding.FragmentSaveReminderBinding
 import com.udacity.project4.locationreminders.geofence.GeofenceBroadcastReceiver
 import com.udacity.project4.locationreminders.reminderslist.ReminderDataItem
 import com.udacity.project4.utils.setDisplayHomeAsUpEnabled
-import org.koin.android.ext.android.inject
-import java.util.concurrent.TimeUnit
+import org.koin.androidx.viewmodel.ext.android.sharedViewModel
 
 class SaveReminderFragment : BaseFragment() {
     //Get the view model this time as a single to be shared with the another fragment
-    override val _viewModel: SaveReminderViewModel by inject()
+    override val _viewModel: SaveReminderViewModel by sharedViewModel()
     private lateinit var binding: FragmentSaveReminderBinding
     private lateinit var geofencingClient: GeofencingClient
     private val geofencePendingIntent: PendingIntent by lazy {
@@ -104,9 +104,17 @@ class SaveReminderFragment : BaseFragment() {
         val settingsClient = LocationServices.getSettingsClient(requireActivity())
         val locationSettingsResponseTask = settingsClient.checkLocationSettings(builder.build())
         locationSettingsResponseTask.addOnFailureListener { exception ->
-            if (exception is ResolvableApiException && resolve){
+            if (exception is ResolvableApiException && resolve) {
                 try {
-                    exception.startResolutionForResult(activity, REQUEST_TURN_DEVICE_LOCATION_ON)
+                    startIntentSenderForResult(
+                        exception.resolution.intentSender,
+                        REQUEST_TURN_DEVICE_LOCATION_ON,
+                        null,
+                        0,
+                        0,
+                        0,
+                        null
+                    )
                 } catch (sendEx: IntentSender.SendIntentException) {
                     Log.e(TAG, "Error getting location settings resolution: " + sendEx.message)
                 }
@@ -135,7 +143,7 @@ class SaveReminderFragment : BaseFragment() {
                     reminderDataItem.longitude!!,
                     GEOFENCE_RADIUS_IN_METERS
                 )
-                .setExpirationDuration(GEOFENCE_EXPIRATION_IN_MILLISECONDS)
+                .setExpirationDuration(Geofence.NEVER_EXPIRE)
                 .setTransitionTypes(Geofence.GEOFENCE_TRANSITION_ENTER)
                 .build()
 
@@ -174,7 +182,17 @@ class SaveReminderFragment : BaseFragment() {
             }
             else -> REQUEST_FOREGROUND_ONLY_PERMISSIONS_REQUEST_CODE
         }
-        requestPermissions(permissionsArray, resultCode)
+
+        AlertDialog.Builder(requireActivity())
+            .setTitle(R.string.geofence_permission_error_title)
+            .setMessage(R.string.location_required_error)
+            .setPositiveButton("OK") { _, i ->
+                requestPermissions(permissionsArray, resultCode)
+            }
+            .setNegativeButton("Cancel") { dialogInterface, _ ->
+                dialogInterface.dismiss()
+            }
+            .show()
     }
 
     @TargetApi(29)
@@ -241,7 +259,6 @@ class SaveReminderFragment : BaseFragment() {
         const val REQUEST_FOREGROUND_ONLY_PERMISSIONS_REQUEST_CODE = 1004
         const val REQUEST_TURN_DEVICE_LOCATION_ON = 1003
         const val GEOFENCE_RADIUS_IN_METERS = 1000f
-        private val GEOFENCE_EXPIRATION_IN_MILLISECONDS = TimeUnit.HOURS.toMillis(1)
         private const val LOCATION_PERMISSION_INDEX = 0
         private const val BACKGROUND_LOCATION_PERMISSION_INDEX = 1
         internal const val ACTION_GEOFENCE_EVENT = "SaveReminderFragment.project4.action.ACTION_GEOFENCE_EVENT"

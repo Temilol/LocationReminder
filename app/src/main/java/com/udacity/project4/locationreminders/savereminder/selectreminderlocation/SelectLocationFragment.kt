@@ -27,20 +27,20 @@ import com.udacity.project4.base.NavigationCommand
 import com.udacity.project4.databinding.FragmentSelectLocationBinding
 import com.udacity.project4.locationreminders.savereminder.SaveReminderViewModel
 import com.udacity.project4.utils.setDisplayHomeAsUpEnabled
-import org.koin.android.ext.android.inject
+import org.koin.androidx.viewmodel.ext.android.sharedViewModel
 import java.util.*
 
 class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
 
     //Use Koin to get the view model of the SaveReminder
     private lateinit var map: GoogleMap
-    override val _viewModel: SaveReminderViewModel by inject()
+    override val _viewModel: SaveReminderViewModel by sharedViewModel()
     private lateinit var binding: FragmentSelectLocationBinding
     private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
-    ): View? {
+    ): View {
         binding =
             DataBindingUtil.inflate(inflater, R.layout.fragment_select_location, container, false)
 
@@ -54,7 +54,6 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
         mapFragment.getMapAsync(this)
 
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-        getCurrentLocation()
         binding.selectButton.setOnClickListener { onLocationSelected() }
 
         return binding.root
@@ -62,38 +61,6 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
 
     private fun onLocationSelected() {
         _viewModel.navigationCommand.postValue(NavigationCommand.Back)
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun getCurrentLocation() {
-        try{
-            if (permissionGranted()) {
-                val lastLocation = fusedLocationProviderClient.lastLocation
-                lastLocation.addOnCompleteListener(requireActivity()) { task ->
-                    if (task.isSuccessful) {
-                        val lastKnownLocation = task.result!!
-                        map.moveCamera(
-                            CameraUpdateFactory.newLatLngZoom(
-                                LatLng(
-                                    lastKnownLocation.latitude,
-                                    lastKnownLocation.longitude
-                                ), ZOOM
-                            )
-                        )
-                    } else {
-                        val latitude = 37.422160
-                        val longitude = -122.084270
-                        val location = LatLng(latitude, longitude)
-                        map.moveCamera(
-                            CameraUpdateFactory
-                                .newLatLngZoom(location, ZOOM)
-                        )
-                    }
-                }
-            }
-        } catch (e: SecurityException) {
-            Log.e(TAG, e.message, e)
-        }
     }
 
     private fun permissionGranted () : Boolean {
@@ -158,10 +125,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
                     .snippet(snippet)
                     .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE))
             )
-            _viewModel.selectedPOI.postValue(null)
-            _viewModel.latitude.postValue(latLng.latitude)
-            _viewModel.longitude.postValue(latLng.longitude)
-            _viewModel.reminderSelectedLocationStr.postValue(getString(R.string.dropped_pin))
+            _viewModel.setMapValues(lat = latLng.latitude, long = latLng.longitude, name = getString(R.string.dropped_pin))
             binding.selectButton.visibility = View.VISIBLE
         }
     }
@@ -169,10 +133,7 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
     private fun setPoiClick(googleMap: GoogleMap) {
         googleMap.setOnPoiClickListener { poi ->
             map.clear()
-            _viewModel.selectedPOI.postValue(poi)
-            _viewModel.latitude.postValue(poi.latLng.latitude)
-            _viewModel.longitude.postValue(poi.latLng.longitude)
-            _viewModel.reminderSelectedLocationStr.postValue(poi?.name)
+            _viewModel.setMapValues(poi, poi.latLng.latitude, poi.latLng.longitude, poi?.name)
             val poiMarker = map.addMarker(
                 MarkerOptions()
                     .position(poi.latLng)
@@ -185,12 +146,40 @@ class SelectLocationFragment : BaseFragment(), OnMapReadyCallback {
 
     @SuppressLint("MissingPermission")
     private fun enableMyLocation() {
+        map.isMyLocationEnabled = false
         if (!permissionGranted()) {
             requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), REQUEST_LOCATION_PERMISSION)
-            map.isMyLocationEnabled = false
             return
         }
-        map.isMyLocationEnabled = true
+        try {
+            val lastLocation = fusedLocationProviderClient.lastLocation
+            lastLocation.addOnCompleteListener(requireActivity()) { task ->
+                if (task.isSuccessful) {
+                    task.result?.let { lastKnownLocation ->
+                        map.moveCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                LatLng(
+                                    lastKnownLocation.latitude,
+                                    lastKnownLocation.longitude
+                                ), ZOOM
+                            )
+                        )
+                        map.isMyLocationEnabled = true
+                    }
+                } else {
+                    // Default Location
+                    val latitude = 37.422160
+                    val longitude = -122.084270
+                    val location = LatLng(latitude, longitude)
+                    map.moveCamera(
+                        CameraUpdateFactory
+                            .newLatLngZoom(location, ZOOM)
+                    )
+                }
+            }
+        } catch (e: SecurityException) {
+            Log.e(TAG, e.message, e)
+        }
     }
 
     private fun setMapStyle(map: GoogleMap) {
